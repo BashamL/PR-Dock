@@ -1,24 +1,32 @@
 import Foundation
-import SwiftUI
 
-struct GitHubPayload: Decodable {
+struct GitHubPayload: Codable, Sendable {
     let viewer: String
     let rateLimit: RateLimit?
     let prs: [PullRequest]
 }
 
-struct RateLimit: Decodable {
+struct RateLimit: Codable, Sendable {
     let remaining: Int
     let resetAt: Date?
 }
 
-struct PullRequest: Decodable, Identifiable, Hashable {
-    struct Repository: Decodable, Hashable {
+enum PullRequestScope: String, Codable, Sendable {
+    case authored
+    case reviewRequested
+}
+
+struct PullRequest: Codable, Identifiable, Hashable, Sendable {
+    struct Repository: Codable, Hashable, Sendable {
         let nameWithOwner: String
     }
 
-    struct LabelConnection: Decodable, Hashable {
-        struct Label: Decodable, Hashable {
+    struct Actor: Codable, Hashable, Sendable {
+        let login: String
+    }
+
+    struct LabelConnection: Codable, Hashable, Sendable {
+        struct Label: Codable, Hashable, Sendable {
             let name: String
             let color: String
         }
@@ -26,14 +34,14 @@ struct PullRequest: Decodable, Identifiable, Hashable {
         let nodes: [Label]
     }
 
-    struct CommentConnection: Decodable, Hashable {
+    struct CommentConnection: Codable, Hashable, Sendable {
         let totalCount: Int
     }
 
-    struct CommitConnection: Decodable, Hashable {
-        struct CommitNode: Decodable, Hashable {
-            struct Commit: Decodable, Hashable {
-                struct StatusRollup: Decodable, Hashable {
+    struct CommitConnection: Codable, Hashable, Sendable {
+        struct CommitNode: Codable, Hashable, Sendable {
+            struct Commit: Codable, Hashable, Sendable {
+                struct StatusRollup: Codable, Hashable, Sendable {
                     let state: String
                 }
 
@@ -49,6 +57,8 @@ struct PullRequest: Decodable, Identifiable, Hashable {
     let title: String
     let url: URL
     let number: Int
+    let scope: PullRequestScope
+    let author: Actor?
     let isDraft: Bool
     let createdAt: Date
     let updatedAt: Date
@@ -85,6 +95,9 @@ struct PullRequest: Decodable, Identifiable, Hashable {
         if checkState == .failure || checkState == .error {
             return PRStatus(label: "Checks failing", tone: .danger, rank: 0)
         }
+        if checkState == .pending || checkState == .expected {
+            return PRStatus(label: "Checks running", tone: .info, rank: 2)
+        }
         if mergeStateStatus == "BLOCKED" {
             return PRStatus(label: "Merge blocked", tone: .warning, rank: 1)
         }
@@ -93,7 +106,8 @@ struct PullRequest: Decodable, Identifiable, Hashable {
         }
 
         let mergeableStates = Set(["CLEAN", "HAS_HOOKS", "UNSTABLE"])
-        if reviewDecision == "APPROVED",
+        if scope == .authored,
+           reviewDecision == "APPROVED",
            checkState == .success,
            mergeableStates.contains(mergeStateStatus ?? "") {
             return PRStatus(label: "Ready to merge", tone: .success, rank: 3, canMerge: true)
@@ -104,14 +118,24 @@ struct PullRequest: Decodable, Identifiable, Hashable {
         if reviewDecision == "REVIEW_REQUIRED" {
             return PRStatus(label: "Review needed", tone: .warning, rank: 1)
         }
-        if checkState == .pending || checkState == .expected {
-            return PRStatus(label: "Checks running", tone: .info, rank: 2)
-        }
         return PRStatus(label: "Open", tone: .info, rank: 2)
+    }
+
+    var group: PullRequestGroup {
+        if scope == .reviewRequested {
+            return .reviewRequests
+        }
+        if presentationStatus.tone == .danger {
+            return .attention
+        }
+        if presentationStatus.canMerge {
+            return .ready
+        }
+        return .waiting
     }
 }
 
-enum CheckState: String {
+enum CheckState: String, Codable, Sendable {
     case success = "SUCCESS"
     case failure = "FAILURE"
     case error = "ERROR"
@@ -120,27 +144,35 @@ enum CheckState: String {
     case none = "NONE"
 }
 
-struct PRStatus: Hashable {
+struct PRStatus: Hashable, Sendable {
     let label: String
     let tone: PRTone
     let rank: Int
     var canMerge = false
 }
 
-enum PRTone: Hashable {
+enum PullRequestGroup: Int, CaseIterable, Identifiable, Sendable {
+    case attention
+    case ready
+    case reviewRequests
+    case waiting
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .attention: "Needs attention"
+        case .ready: "Ready"
+        case .reviewRequests: "Review requests"
+        case .waiting: "Waiting"
+        }
+    }
+}
+
+enum PRTone: Hashable, Sendable {
     case success
     case danger
     case warning
     case info
     case muted
-
-    var color: Color {
-        switch self {
-        case .success: return Color(red: 0.29, green: 0.82, blue: 0.48)
-        case .danger: return Color(red: 1.0, green: 0.42, blue: 0.45)
-        case .warning: return Color(red: 0.91, green: 0.70, blue: 0.32)
-        case .info: return Color(red: 0.40, green: 0.67, blue: 0.98)
-        case .muted: return Color(red: 0.58, green: 0.61, blue: 0.66)
-        }
-    }
 }
