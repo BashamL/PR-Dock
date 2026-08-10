@@ -8,7 +8,8 @@ cockpit when clicked.
 
 - Native Liquid Glass that adapts to the desktop and accessibility settings
 - Dock-aware leading or trailing placement across bottom and side Docks
-- Compact priority summary with actionable counts and sync status
+- Available across desktop Spaces without overlaying full-screen apps
+- Compact preview of the latest pushed owned PR with merge and CI status
 - Authored pull requests and pull requests awaiting your review
 - “Needs attention,” “Ready,” “Review requests,” and “Waiting” sections
 - CI, review, conflict, draft, branch, comment, and diff context

@@ -118,23 +118,14 @@ struct ExpandedDockView: View {
 
     private var pullRequestList: some View {
         ScrollView {
-            LazyVStack(spacing: 3, pinnedViews: [.sectionHeaders]) {
-                ForEach(model.groupedPullRequests, id: \.group) { section in
-                    Section {
-                        ForEach(section.items) { pullRequest in
-                            PullRequestRow(
-                                pullRequest: pullRequest,
-                                isMerging: model.mergingIDs.contains(pullRequest.id),
-                                open: { model.open(pullRequest) },
-                                merge: { model.requestMerge(pullRequest) }
-                            )
-                        }
-                    } header: {
-                        SectionHeader(
-                            title: section.group.title,
-                            count: section.items.count
-                        )
-                    }
+            LazyVStack(spacing: 3) {
+                ForEach(model.orderedPullRequests) { pullRequest in
+                    PullRequestRow(
+                        pullRequest: pullRequest,
+                        isMerging: model.mergingIDs.contains(pullRequest.id),
+                        open: { model.open(pullRequest) },
+                        merge: { model.requestMerge(pullRequest) }
+                    )
                 }
             }
             .padding(.horizontal, 8)
@@ -159,7 +150,7 @@ struct ExpandedDockView: View {
             }
             Spacer()
             Button("Open GitHub", action: model.openDashboard)
-                .buttonStyle(.plain)
+                .buttonStyle(.link)
                 .help("Open your pull requests on GitHub")
         }
         .font(.system(size: 10))
@@ -178,6 +169,7 @@ private struct PullRequestRow: View {
     let open: () -> Void
     let merge: () -> Void
     @State private var isHovered = false
+    @State private var isMergeHovered = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -203,12 +195,15 @@ private struct PullRequestRow: View {
                     .foregroundStyle(PRTone.success.color)
                     .frame(width: 30, height: 30)
                     .background(
-                        PRTone.success.color.opacity(0.11),
+                        PRTone.success.color.opacity(isMergeHovered ? 0.22 : 0.11),
                         in: .rect(cornerRadius: 9)
                     )
+                    .scaleEffect(isMergeHovered ? 1.06 : 1)
                 }
                 .buttonStyle(.plain)
                 .disabled(isMerging)
+                .onHover { isMergeHovered = $0 }
+                .animation(.easeOut(duration: 0.12), value: isMergeHovered)
                 .help("Squash and merge #\(pullRequest.number)")
                 .accessibilityLabel("Squash and merge pull request \(pullRequest.number)")
             }
@@ -321,26 +316,6 @@ private struct PullRequestRow: View {
     }
 }
 
-private struct SectionHeader: View {
-    let title: String
-    let count: Int
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 10.5, weight: .semibold))
-            Text(count.formatted())
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 10)
-        .frame(height: 27)
-        .background(.background.opacity(0.78))
-        .accessibilityElement(children: .combine)
-    }
-}
-
 private struct SummaryMetric: View {
     let value: Int
     let label: String
@@ -370,7 +345,7 @@ private struct ErrorBanner: View {
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button("Retry", action: retry)
-                .buttonStyle(.plain)
+                .buttonStyle(.link)
                 .fontWeight(.semibold)
         }
         .font(.system(size: 10.5))

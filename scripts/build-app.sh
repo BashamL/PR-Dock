@@ -18,6 +18,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BIN_DIR/PRDock" "$MACOS_DIR/PRDock"
 cp "$ROOT_DIR/Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp "$ROOT_DIR/Resources/PrivacyInfo.xcprivacy" "$RESOURCES_DIR/PrivacyInfo.xcprivacy"
+cp "$ROOT_DIR/Resources/GitHub.svg" "$RESOURCES_DIR/GitHub.svg"
 
 plutil -lint "$CONTENTS_DIR/Info.plist" "$RESOURCES_DIR/PrivacyInfo.xcprivacy"
 codesign --force --sign - "$APP_DIR"

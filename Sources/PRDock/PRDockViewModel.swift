@@ -92,10 +92,19 @@ final class PRDockViewModel: ObservableObject {
         }
     }
 
+    var orderedPullRequests: [PullRequest] {
+        groupedPullRequests.flatMap(\.items)
+    }
+
+    var latestAuthoredPullRequest: PullRequest? {
+        pullRequests
+            .filter { $0.scope == .authored }
+            .max { $0.lastPushAt < $1.lastPushAt }
+    }
+
     var expandedHeight: CGFloat {
         let visibleRows = min(max(pullRequests.count, 1), 6)
-        let sectionCount = groupedPullRequests.count
-        return min(720, CGFloat(178 + visibleRows * 76 + sectionCount * 27))
+        return min(720, CGFloat(178 + visibleRows * 76))
     }
 
     var readyCount: Int {

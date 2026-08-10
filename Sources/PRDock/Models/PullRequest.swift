@@ -45,6 +45,7 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
                     let state: String
                 }
 
+                let committedDate: Date?
                 let statusCheckRollup: StatusRollup?
             }
 
@@ -80,6 +81,10 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
             return .none
         }
         return CheckState(rawValue: value) ?? .none
+    }
+
+    var lastPushAt: Date {
+        commits.nodes.first?.commit.committedDate ?? updatedAt
     }
 
     var presentationStatus: PRStatus {

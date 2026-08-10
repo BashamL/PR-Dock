@@ -1,4 +1,36 @@
+import AppKit
 import SwiftUI
+
+struct GitHubIcon: View {
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let image = Self.image {
+                Image(nsImage: image)
+                    .resizable()
+                    .renderingMode(.template)
+            } else {
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .resizable()
+            }
+        }
+        .scaledToFit()
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private static let image: NSImage? = {
+        guard let url = Bundle.main.url(
+            forResource: "GitHub",
+            withExtension: "svg"
+        ), let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+        image.isTemplate = true
+        return image
+    }()
+}
 
 struct BrandIcon: View {
     let size: CGFloat
@@ -21,6 +53,7 @@ struct IconButton: View {
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
@@ -29,9 +62,12 @@ struct IconButton: View {
                 .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
                 .frame(width: 28, height: 28)
                 .background(
-                    isActive ? Color.accentColor.opacity(0.12) : Color.clear,
+                    isActive
+                        ? Color.accentColor.opacity(0.14)
+                        : Color.primary.opacity(isHovered ? 0.09 : 0),
                     in: .rect(cornerRadius: 9)
                 )
+                .scaleEffect(isHovered && !reduceMotion ? 1.06 : 1)
                 .rotationEffect(isSpinning && !reduceMotion ? .degrees(360) : .zero)
                 .animation(
                     isSpinning && !reduceMotion
@@ -41,6 +77,8 @@ struct IconButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
         .help(label)
         .accessibilityLabel(label)
     }

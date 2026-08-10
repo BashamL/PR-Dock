@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 final class FloatingPanelController {
     private enum Metrics {
-        static let collapsedWidth: CGFloat = 292
+        static let collapsedWidth: CGFloat = expandedWidth
         static let expandedWidth: CGFloat = 440
     }
 
@@ -18,6 +18,9 @@ final class FloatingPanelController {
     private let eventMonitors = EventMonitorTokens()
 
     var panelFrame: CGRect { panel.frame }
+    var panelCollectionBehavior: NSWindow.CollectionBehavior {
+        panel.collectionBehavior
+    }
 
     init(model: PRDockViewModel) {
         self.model = model
@@ -65,7 +68,6 @@ final class FloatingPanelController {
         panel.level = .floating
         panel.collectionBehavior = [
             .canJoinAllSpaces,
-            .fullScreenAuxiliary,
             .stationary,
             .ignoresCycle,
         ]

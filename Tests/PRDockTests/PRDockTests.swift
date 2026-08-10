@@ -184,9 +184,20 @@ struct SettingsAndViewModelTests {
             viewer: "octocat",
             rateLimit: RateLimit(remaining: 5000, resetAt: nil),
             prs: [
-                makePullRequest(number: 1),
-                makePullRequest(number: 2, scope: .reviewRequested),
-                makePullRequest(number: 3, checkState: "FAILURE"),
+                makePullRequest(
+                    number: 1,
+                    lastPushAt: Date(timeIntervalSince1970: 300)
+                ),
+                makePullRequest(
+                    number: 2,
+                    scope: .reviewRequested,
+                    lastPushAt: Date(timeIntervalSince1970: 400)
+                ),
+                makePullRequest(
+                    number: 3,
+                    checkState: "FAILURE",
+                    lastPushAt: Date(timeIntervalSince1970: 100)
+                ),
             ]
         )
         let model = PRDockViewModel(
@@ -202,6 +213,8 @@ struct SettingsAndViewModelTests {
         #expect(model.readyCount == 1)
         #expect(model.reviewRequestCount == 1)
         #expect(model.attentionCount == 1)
+        #expect(model.latestAuthoredPullRequest?.number == 1)
+        #expect(model.orderedPullRequests.map(\.number) == [3, 1, 2])
 
         settings.showsReviewRequests = false
         #expect(model.pullRequests.count == 2)
@@ -283,7 +296,10 @@ struct SettingsAndViewModelTests {
         )
         let controller = FloatingPanelController(model: model)
 
-        #expect(controller.panelFrame.width == 292)
+        #expect(controller.panelFrame.width == 440)
+        #expect(
+            !controller.panelCollectionBehavior.contains(.fullScreenAuxiliary)
+        )
 
         model.expand()
         try? await Task.sleep(for: .milliseconds(350))
@@ -297,7 +313,7 @@ struct SettingsAndViewModelTests {
         )
         try? await Task.sleep(for: .milliseconds(300))
         #expect(model.presentation == .collapsed)
-        #expect(controller.panelFrame.width == 292)
+        #expect(controller.panelFrame.width == 440)
 
         controller.toggleVisibility()
     }
@@ -372,7 +388,8 @@ private func makePullRequest(
     scope: PullRequestScope = .authored,
     reviewDecision: String? = "APPROVED",
     mergeState: String? = "CLEAN",
-    checkState: String = "SUCCESS"
+    checkState: String = "SUCCESS",
+    lastPushAt: Date? = nil
 ) -> PullRequest {
     PullRequest(
         title: "Improve PR Dock",
@@ -395,6 +412,7 @@ private func makePullRequest(
             nodes: [
                 .init(
                     commit: .init(
+                        committedDate: lastPushAt,
                         statusCheckRollup: .init(state: checkState)
                     )
                 ),

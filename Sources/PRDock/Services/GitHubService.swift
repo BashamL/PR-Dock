@@ -98,6 +98,7 @@ struct GitHubService: GitHubServing {
       commits(last: 1) {
         nodes {
           commit {
+            committedDate
             statusCheckRollup { state }
           }
         }
