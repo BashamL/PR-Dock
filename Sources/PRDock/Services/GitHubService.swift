@@ -67,12 +67,32 @@ struct GitHubService: GitHubServing {
       rateLimit { remaining resetAt }
       authored: search(query: $authored, type: ISSUE, first: 50) {
         nodes {
-          ...PullRequestFields
+          ...AuthoredPullRequestFields
         }
       }
       reviewRequested: search(query: $reviews, type: ISSUE, first: 50) {
         nodes {
           ...PullRequestFields
+        }
+      }
+    }
+
+    fragment AuthoredPullRequestFields on PullRequest {
+      ...PullRequestFields
+      reviewThreads(first: 100) {
+        nodes {
+          isResolved
+          isOutdated
+          path
+          line
+          originalLine
+          comments(first: 50) {
+            nodes {
+              body
+              url
+              author { login }
+            }
+          }
         }
       }
     }

@@ -173,14 +173,12 @@ private struct PullRequestRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Button(action: open) {
-                HStack(alignment: .top, spacing: 10) {
-                    statusIcon
-                    details
-                }
-                .contentShape(Rectangle())
+            HStack(alignment: .top, spacing: 10) {
+                statusIcon
+                details
             }
-            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: open)
 
             if pullRequest.presentationStatus.canMerge {
                 Button(action: merge) {
@@ -258,7 +256,10 @@ private struct PullRequestRow: View {
             .foregroundStyle(.tertiary)
 
             HStack(spacing: 6) {
-                StatusPill(status: pullRequest.presentationStatus)
+                StatusPill(
+                    status: pullRequest.presentationStatus,
+                    copyText: pullRequest.activeReviewClipboardText
+                )
 
                 Label(pullRequest.headRefName, systemImage: "arrow.triangle.branch")
                     .lineLimit(1)

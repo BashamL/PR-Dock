@@ -100,6 +100,24 @@ struct PullRequestModelTests {
         #expect(blocked.presentationStatus.label == "Merge blocked")
     }
 
+    @Test func copiesOnlyCurrentUnresolvedReviewFeedback() {
+        let pullRequest = makePullRequest(
+            reviewDecision: "CHANGES_REQUESTED",
+            reviewThreads: [
+                makeReviewThread(body: "Handle the nil case.", line: 42),
+                makeReviewThread(body: "Already fixed.", isResolved: true),
+                makeReviewThread(body: "Commented on old code.", isOutdated: true),
+            ]
+        )
+
+        let text = pullRequest.activeReviewClipboardText
+        #expect(pullRequest.activeReviewThreads.count == 1)
+        #expect(text?.contains("Sources/App.swift:42") == true)
+        #expect(text?.contains("Handle the nil case.") == true)
+        #expect(text?.contains("Already fixed.") == false)
+        #expect(text?.contains("Commented on old code.") == false)
+    }
+
     @Test func decodesGitHubPayload() throws {
         let data = """
         {
@@ -389,7 +407,8 @@ private func makePullRequest(
     reviewDecision: String? = "APPROVED",
     mergeState: String? = "CLEAN",
     checkState: String = "SUCCESS",
-    lastPushAt: Date? = nil
+    lastPushAt: Date? = nil,
+    reviewThreads: [PullRequest.ReviewThreadConnection.ReviewThread] = []
 ) -> PullRequest {
     PullRequest(
         title: "Improve PR Dock",
@@ -407,6 +426,7 @@ private func makePullRequest(
         additions: 20,
         deletions: 4,
         comments: .init(totalCount: 2),
+        reviewThreads: .init(nodes: reviewThreads),
         labels: .init(nodes: []),
         commits: .init(
             nodes: [
@@ -419,5 +439,29 @@ private func makePullRequest(
             ]
         ),
         repository: .init(nameWithOwner: "acme/app")
+    )
+}
+
+private func makeReviewThread(
+    body: String,
+    line: Int? = 10,
+    isResolved: Bool = false,
+    isOutdated: Bool = false
+) -> PullRequest.ReviewThreadConnection.ReviewThread {
+    .init(
+        isResolved: isResolved,
+        isOutdated: isOutdated,
+        path: "Sources/App.swift",
+        line: line,
+        originalLine: line,
+        comments: .init(
+            nodes: [
+                .init(
+                    body: body,
+                    url: URL(string: "https://github.com/acme/app/pull/1#discussion_r1")!,
+                    author: .init(login: "reviewer")
+                ),
+            ]
+        )
     )
 }

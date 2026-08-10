@@ -38,6 +38,29 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
         let totalCount: Int
     }
 
+    struct ReviewThreadConnection: Codable, Hashable, Sendable {
+        struct ReviewThread: Codable, Hashable, Sendable {
+            struct ReviewCommentConnection: Codable, Hashable, Sendable {
+                struct ReviewComment: Codable, Hashable, Sendable {
+                    let body: String
+                    let url: URL
+                    let author: Actor?
+                }
+
+                let nodes: [ReviewComment]
+            }
+
+            let isResolved: Bool
+            let isOutdated: Bool
+            let path: String
+            let line: Int?
+            let originalLine: Int?
+            let comments: ReviewCommentConnection
+        }
+
+        let nodes: [ReviewThread]
+    }
+
     struct CommitConnection: Codable, Hashable, Sendable {
         struct CommitNode: Codable, Hashable, Sendable {
             struct Commit: Codable, Hashable, Sendable {
@@ -70,6 +93,7 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
     let additions: Int
     let deletions: Int
     let comments: CommentConnection
+    let reviewThreads: ReviewThreadConnection?
     let labels: LabelConnection
     let commits: CommitConnection
     let repository: Repository
@@ -85,6 +109,37 @@ struct PullRequest: Codable, Identifiable, Hashable, Sendable {
 
     var lastPushAt: Date {
         commits.nodes.first?.commit.committedDate ?? updatedAt
+    }
+
+    var activeReviewThreads: [ReviewThreadConnection.ReviewThread] {
+        guard reviewDecision == "CHANGES_REQUESTED" else { return [] }
+        return reviewThreads?.nodes.filter {
+            !$0.isResolved && !$0.isOutdated && !$0.comments.nodes.isEmpty
+        } ?? []
+    }
+
+    var activeReviewClipboardText: String? {
+        let sections = activeReviewThreads.compactMap { thread -> String? in
+            guard let comment = thread.comments.nodes.first else { return nil }
+            let body = comment.body.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !body.isEmpty else { return nil }
+
+            let line = thread.line ?? thread.originalLine
+            let location = line.map { "\(thread.path):\($0)" } ?? thread.path
+            let author = comment.author.map { "@\($0.login)" } ?? "Unknown reviewer"
+            return "\(location) — \(author)\n\(body)\n\(comment.url.absoluteString)"
+        }
+        guard !sections.isEmpty else { return nil }
+
+        let feedback = sections.enumerated().map { index, section in
+            "\(index + 1). \(section)"
+        }.joined(separator: "\n\n")
+        return """
+        Review feedback for \(repository.nameWithOwner)#\(number) — \(title)
+        \(url.absoluteString)
+
+        \(feedback)
+        """
     }
 
     var presentationStatus: PRStatus {

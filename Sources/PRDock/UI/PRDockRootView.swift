@@ -17,11 +17,15 @@ struct PRDockRootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .glassEffect(
-                .regular,
-                in: .rect(cornerRadius: model.isExpanded ? 24 : 20)
+                .clear,
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+            .background(
+                .black.opacity(0.14),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
             )
             .glassEffectID("pr-dock-surface", in: glassNamespace)
-            .contentShape(.rect(cornerRadius: model.isExpanded ? 24 : 20))
+            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .animation(
             reduceMotion ? nil : .snappy(duration: 0.22, extraBounce: 0.04),

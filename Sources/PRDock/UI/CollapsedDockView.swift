@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct CollapsedDockView: View {
@@ -6,35 +7,34 @@ struct CollapsedDockView: View {
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: model.expand) {
-            HStack(spacing: 8) {
-                GitHubIcon(size: 22)
-                    .scaleEffect(isHovered && !reduceMotion ? 1.06 : 1)
+        HStack(spacing: 8) {
+            GitHubIcon(size: 22)
+                .scaleEffect(isHovered && !reduceMotion ? 1.06 : 1)
 
-                Divider()
-                    .frame(height: 34)
+            Divider()
+                .frame(height: 34)
 
-                Group {
-                    if let pullRequest = model.latestAuthoredPullRequest {
-                        PullRequestPreview(
-                            pullRequest: pullRequest,
-                            isStale: model.isShowingStaleData
-                        )
-                    } else {
-                        compactMessage
-                    }
+            Group {
+                if let pullRequest = model.latestAuthoredPullRequest {
+                    PullRequestPreview(
+                        pullRequest: pullRequest,
+                        isStale: model.isShowingStaleData
+                    )
+                } else {
+                    compactMessage
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                .primary.opacity(isHovered ? 0.035 : 0),
-                in: .rect(cornerRadius: 20)
-            )
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            .primary.opacity(isHovered ? 0.035 : 0),
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture(perform: model.expand)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovered)
         .help("Open PR Dock")
@@ -145,7 +145,8 @@ private struct PullRequestPreview: View {
                 InlineStatus(
                     icon: nil,
                     text: pullRequest.presentationStatus.label,
-                    color: pullRequest.presentationStatus.tone.color
+                    color: pullRequest.presentationStatus.tone.color,
+                    copyText: pullRequest.activeReviewClipboardText
                 )
 
                 let ci = ciSummary(for: pullRequest)
@@ -165,17 +166,52 @@ private struct InlineStatus: View {
     let icon: String?
     let text: String
     let color: Color
+    var copyText: String? = nil
+    @State private var didCopy = false
 
     var body: some View {
+        Group {
+            if let copyText {
+                Button {
+                    copy(copyText)
+                } label: {
+                    label
+                }
+                .buttonStyle(.plain)
+                .help("Copy unresolved review feedback")
+                .accessibilityLabel("Copy unresolved review feedback")
+            } else {
+                label
+            }
+        }
+        .animation(.snappy(duration: 0.22), value: didCopy)
+    }
+
+    private var label: some View {
         HStack(spacing: 3) {
             if let icon {
                 Image(systemName: icon)
             }
-            Text(text)
+            Text(didCopy ? "Copied!" : text)
                 .lineLimit(1)
+                .contentTransition(.opacity)
         }
         .font(.system(size: 9, weight: .semibold))
-        .foregroundStyle(color)
+        .foregroundStyle(didCopy ? PRTone.success.color : color)
+    }
+
+    private func copy(_ value: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
+        withAnimation {
+            didCopy = true
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation {
+                didCopy = false
+            }
+        }
     }
 }
 

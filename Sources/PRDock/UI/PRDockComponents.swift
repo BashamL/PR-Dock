@@ -86,14 +86,55 @@ struct IconButton: View {
 
 struct StatusPill: View {
     let status: PRStatus
+    var copyText: String? = nil
+    @State private var didCopy = false
+    @State private var isHovered = false
 
     var body: some View {
-        Text(status.label)
+        Group {
+            if let copyText {
+                Button {
+                    copy(copyText)
+                } label: {
+                    label
+                }
+                .buttonStyle(.plain)
+                .onHover { isHovered = $0 }
+                .help("Copy unresolved review feedback")
+                .accessibilityLabel("Copy unresolved review feedback")
+            } else {
+                label
+            }
+        }
+        .animation(.snappy(duration: 0.22), value: didCopy)
+    }
+
+    private var label: some View {
+        let tone = didCopy ? PRTone.success : status.tone
+        return Text(didCopy ? "Copied!" : status.label)
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(status.tone.color)
+            .foregroundStyle(tone.color)
+            .contentTransition(.opacity)
             .padding(.horizontal, 7)
             .frame(height: 21)
-            .background(status.tone.color.opacity(0.11), in: .rect(cornerRadius: 7))
+            .background(
+                tone.color.opacity(isHovered ? 0.2 : 0.11),
+                in: .rect(cornerRadius: 7)
+            )
+    }
+
+    private func copy(_ value: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
+        withAnimation {
+            didCopy = true
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation {
+                didCopy = false
+            }
+        }
     }
 }
 
