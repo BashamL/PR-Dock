@@ -35,6 +35,7 @@ final class FloatingPanelController {
         observeState()
         movePanel(animated: false)
         panel.orderFrontRegardless()
+        panel.makeKey()
     }
 
     deinit {
@@ -52,6 +53,7 @@ final class FloatingPanelController {
         } else {
             movePanel(animated: false, preferPointerScreen: true)
             panel.orderFrontRegardless()
+            panel.makeKey()
         }
     }
 
@@ -75,7 +77,7 @@ final class FloatingPanelController {
         let containerView = NSView(frame: panel.contentRect(forFrameRect: panel.frame))
         containerView.autoresizingMask = [.width, .height]
 
-        let hostingView = NSHostingView(
+        let hostingView = FirstMouseHostingView(
             rootView: PRDockRootView(model: model, settings: model.settings)
         )
         hostingView.sizingOptions = []
@@ -245,6 +247,12 @@ final class FloatingPanelController {
 private final class DockPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+}
+
+private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
 }
 
 private final class EventMonitorTokens: @unchecked Sendable {

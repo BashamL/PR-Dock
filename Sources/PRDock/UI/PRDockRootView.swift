@@ -17,11 +17,11 @@ struct PRDockRootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .glassEffect(
-                .clear,
+                .regular,
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .background(
-                .black.opacity(0.24),
+                .black.opacity(0.30),
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .glassEffectID("pr-dock-surface", in: glassNamespace)
